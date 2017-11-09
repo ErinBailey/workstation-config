@@ -1,0 +1,95 @@
+---
+- hosts: localhost
+  vars:
+    dock_items_to_remove:
+    - Launchpad
+    - Mail
+    - Safari
+    - Contacts
+    - Notes
+    - Reminders
+    - Maps
+    - Photos
+    - Messages
+    - FaceTime
+    - iTunes
+    - iBooks
+    - App Store
+    - System Preferences
+    - Calendar
+    - Siri
+
+    dockitems_to_persist:
+    - name: Visual Studio Code
+      path: /Applications/Visual Studio Code.app
+      position: 1
+
+    - name: Slack
+      path: /Applications/Slack.app
+      position: 2
+
+    - name: iTerm
+      path: /Applications/iTerm.app
+      position: 3
+    
+    - name: Postman
+      path: /Applications/Postman.app
+      position: 4
+
+    # github_repos_to_clone:
+    # - url: ''
+    #   name: patches-be
+    # - url: ''
+    #   name: patches-fe
+
+  tasks:
+  - name: Tap Homebrew Packages
+    homebrew_tap:
+      name: cloudfoundry/tap
+      state: present
+
+  - name: Install Homebrew Packages
+    homebrew:
+      name: "{{ item }}"
+      state: present
+    with_items:
+    - dockutil
+    - node
+    - git
+    - python
+    - cf-cli
+
+  - name: Install Homebrew-Cask Packages
+    homebrew_cask:
+      name: "{{ item }}"
+      state: present
+    with_items:
+    - slack
+    - postman
+    - iterm2
+    - spectacle
+
+  - name: Remove everything from dock
+    shell: dockutil --remove '{{ item }}'
+    ignore_errors: true
+    with_items: "{{ dock_items_to_remove }}"
+
+  - name: Check if items in dock exist
+    shell: dockutil --find '{{ item.name }}' || dockutil --add '{{ item.path }}'
+    with_items: "{{ dockitems_to_persist }}"
+
+  - name: Reorder items in the Dock
+    shell: dockutil --move '{{ item.name }}' --position '{{ item.position }}'
+    with_items: "{{ dockitems_to_persist }}"
+
+  - name: Create directory for git repo
+    file:
+      path: ~/workspace
+      state: directory
+
+  # - name: Clone github repositories
+  #   git:
+  #     clone: yes
+  #     repo: "{{ item.url }}"
+  #     dest: ~/workspace/{{ item.name }}
+  #   with_items: "{{ github_repos_to_clone }}"
